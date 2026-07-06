@@ -1,4 +1,4 @@
-Welcome to my GitHub repository for the Script Programming course.
+# Welcome to my GitHub repository for the Script Programming course.
 
 ### My Information
 - **Name:** นายชิษณุพงศ์ ซู
