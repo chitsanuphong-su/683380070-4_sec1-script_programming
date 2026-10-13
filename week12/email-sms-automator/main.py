@@ -1,0 +1,201 @@
+import argparse
+import os
+import sys
+import time
+from pathlib import Path
+
+# Add 'src' directory to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
+from email_sender import EmailSender
+from email_receiver import EmailReceiver
+from sms_gateway import SMSGateway
+from utils import ensure_directory_exists, get_env_variable, setup_logging
+
+logger = setup_logging(__name__)
+
+
+def main():
+    """
+    Main function to orchestrate email and SMS automation tasks.
+    Supports default DRY RUN mode and explicit --live mode.
+    """
+    parser = argparse.ArgumentParser(
+        description="Week 12 — LabX BASIC: Automating Communications (Email & SMS)"
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Execute in LIVE mode (connects to real SMTP/IMAP servers and sends real communications). "
+        "Default is DRY RUN.",
+    )
+    args = parser.parse_args()
+    is_live = args.live
+
+    mode_label = "LIVE MODE" if is_live else "DRY RUN MODE (Simulation)"
+    logger.info("=" * 65)
+    logger.info(f" Starting Email & SMS Automator in {mode_label}")
+    logger.info("=" * 65)
+
+    base_dir = os.path.dirname(__file__)
+    data_dir = os.path.join(base_dir, "data")
+    attachments_dir = os.path.join(data_dir, "attachments")
+    ensure_directory_exists(data_dir)
+    ensure_directory_exists(attachments_dir)
+
+    # --- Load Credentials from Environment Variables ---
+    try:
+        sender_email = get_env_variable("SENDER_EMAIL")
+        sender_app_password = get_env_variable("SENDER_APP_PASSWORD")
+        smtp_server = get_env_variable("SMTP_SERVER")
+        smtp_port = int(get_env_variable("SMTP_PORT"))
+        imap_server = get_env_variable("IMAP_SERVER")
+
+        test_recipient_email = get_env_variable("TEST_RECIPIENT_EMAIL")
+        test_sms_phone_number = get_env_variable("TEST_SMS_PHONE_NUMBER")
+        test_sms_carrier = get_env_variable("TEST_SMS_CARRIER")
+    except ValueError as e:
+        logger.critical(
+            f"Configuration error: {e}. Please set all required environment variables in your .env file."
+        )
+        sys.exit(1)
+
+    # In LIVE mode, enforce safety verification
+    if is_live:
+        logger.warning("=" * 65)
+        logger.warning(" LIVE MODE ACTIVATED!")
+        logger.warning(" Real network connections will be opened to:")
+        logger.warning(f"   SMTP: {smtp_server}:{smtp_port}")
+        logger.warning(f"   IMAP: {imap_server}")
+        logger.warning(f"   Recipient: {test_recipient_email}")
+        logger.warning("=" * 65)
+
+    # --- Initialize Handlers ---
+    email_sender = EmailSender(
+        smtp_server=smtp_server,
+        smtp_port=smtp_port,
+        sender_email=sender_email,
+        sender_password=sender_app_password,
+        dry_run=not is_live,
+    )
+    email_receiver = EmailReceiver(
+        imap_server=imap_server,
+        sender_email=sender_email,
+        sender_password=sender_app_password,
+        dry_run=not is_live,
+    )
+    sms_gateway = SMSGateway(email_sender)
+
+    # --- Task 1: Send a simple plaintext email ---
+    logger.info("\n--- Task 1: Sending a simple plaintext email ---")
+    task1_success = email_sender.send_email(
+        recipient_email=test_recipient_email,
+        subject="Automated Python Test Email",
+        body="Hello from your Python automation script! This is a plain text email.",
+    )
+    logger.info(f"Task 1 result: {'SUCCESS' if task1_success else 'FAILED'}")
+    if is_live:
+        time.sleep(2)
+
+    # --- Task 2: Send an email with an attachment ---
+    logger.info("\n--- Task 2: Sending an email with an attachment ---")
+    attachment_file_path = os.path.join(data_dir, "dummy_report.pdf")
+    if os.path.exists(attachment_file_path):
+        task2_success = email_sender.send_email(
+            recipient_email=test_recipient_email,
+            subject="Python Test Email with Attachment - Daily Report",
+            body="Please find the daily report attached.",
+            attachment_path=attachment_file_path,
+        )
+        logger.info(f"Task 2 result: {'SUCCESS' if task2_success else 'FAILED'}")
+    else:
+        logger.warning(
+            f"Attachment file not found at '{attachment_file_path}'. Skipping attachment email."
+        )
+    if is_live:
+        time.sleep(2)
+
+    # --- Task 3: Send an SMS via email gateway ---
+    logger.info("\n--- Task 3: Sending an SMS via email gateway ---")
+    sms_message = "Hello from Python! This is an automated SMS via email gateway."
+    task3_success = sms_gateway.send_sms(
+        phone_number=test_sms_phone_number,
+        message=sms_message,
+        carrier_name=test_sms_carrier,
+    )
+    logger.info(f"Task 3 result: {'SUCCESS' if task3_success else 'FAILED'}")
+    if is_live:
+        time.sleep(5)
+
+    # --- Task 4: Receive and process emails ---
+    logger.info("\n--- Task 4: Receiving and processing emails ---")
+    demo_subject = "Python Test: Email for Receiving Demo"
+
+    # If dry-run, prime the receiver with a simulated message
+    if not is_live:
+        pdf_bytes = b""
+        if os.path.exists(attachment_file_path):
+            with open(attachment_file_path, "rb") as f:
+                pdf_bytes = f.read()
+
+        email_receiver._dry_run_messages[b"101"] = {
+            "from": sender_email,
+            "subject": demo_subject,
+            "body": "This email is specifically for the receiving demo. It has an attachment!",
+            "attachment_filename": "downloaded_dummy_report.pdf",
+            "attachment_data": pdf_bytes,
+            "seen": False,
+        }
+
+    # In live mode, send an actual test email to self
+    if is_live:
+        email_sender.send_email(
+            recipient_email=sender_email,
+            subject=demo_subject,
+            body="This email is specifically for the receiving demo. It has an attachment!",
+            attachment_path=attachment_file_path,
+        )
+        logger.info("Sent a demo email to self for receiving task. Waiting 10 seconds for delivery...")
+        time.sleep(10)
+    else:
+        logger.info("[DRY RUN] Demo email prepared in simulated store.")
+
+    # Search for unseen emails from self with specific subject
+    uids = email_receiver.search_emails(
+        criteria="UNSEEN",
+        from_sender=sender_email,
+        subject_contains=demo_subject,
+    )
+
+    if uids:
+        logger.info(f"Found {len(uids)} matching unread email(s) for receiving demo.")
+        for uid in uids:
+            uid_str = uid.decode("utf-8") if isinstance(uid, bytes) else str(uid)
+            logger.info(f"Processing email UID: {uid_str}")
+            email_details = email_receiver.fetch_email_content(
+                uid=uid,
+                mark_as_read=True,
+                download_attachments_dir=attachments_dir,
+            )
+            if email_details:
+                logger.info(f"  Sender: {email_details['sender']}")
+                logger.info(f"  Subject: {email_details['subject']}")
+                logger.info(f"  Body Snippet: {email_details['body_snippet']}")
+                if email_details["attachments_downloaded"]:
+                    logger.info(
+                        f"  Attachments downloaded: {', '.join(email_details['attachments_downloaded'])}"
+                    )
+                else:
+                    logger.info("  No attachments downloaded for this email.")
+            else:
+                logger.error(f"Could not retrieve details for email UID: {uid_str}")
+    else:
+        logger.info("No matching unread emails found for receiving demo.")
+
+    logger.info("\n" + "=" * 65)
+    logger.info(" All communication automation tasks completed successfully.")
+    logger.info("=" * 65)
+
+
+if __name__ == "__main__":
+    main()

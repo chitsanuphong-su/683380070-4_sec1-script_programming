@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Log files
+*.log
+
+# Downloaded attachments
+data/attachments/*
+!data/attachments/.gitkeep
+
+# IDE & Editor files
+.vscode/
+.idea/
+.ipynb_checkpoints/
