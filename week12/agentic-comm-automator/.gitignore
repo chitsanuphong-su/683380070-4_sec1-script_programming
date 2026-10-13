@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+.venv/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Environment variables (DO NOT COMMIT CREDENTIALS)
+.env
+.env.*
+!.env.example
+
+# Log files
+*.log
+
+# Generated files / downloaded attachments
+data/attachments/*
+!data/attachments/.gitkeep
+
+data/incoming_attachments/*
+!data/incoming_attachments/.gitkeep
+
+# Audit reports
+reports/*
+!reports/.gitkeep
+
+# Testing cache
+.pytest_cache/
