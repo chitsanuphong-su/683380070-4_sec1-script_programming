@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+.ipynb_checkpoints/ # For Jupyter/Colab notebooks
+.vscode/ # VS Code workspace settings if you don't want to share
+
+# Environment
+.env
+
+# Dependencies
+# This specifically ignores the virtual environment directory created by pipenv or venv
+venv/
+env/
+
+# Data files (optional, if you want to regenerate them easily)
+# data/tasks.json
