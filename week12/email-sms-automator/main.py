@@ -90,8 +90,8 @@ def main():
     logger.info("\n--- Task 1: Sending a simple plaintext email ---")
     task1_success = email_sender.send_email(
         recipient_email=test_recipient_email,
-        subject="Automated Python Test Email",
-        body="Hello from your Python automation script! This is a plain text email.",
+        subject="นายชิษณุพงศ์ ซู 683380070-4 - Automated Python Test Email",
+        body="นายชิษณุพงศ์ ซู 683380070-4",
     )
     logger.info(f"Task 1 result: {'SUCCESS' if task1_success else 'FAILED'}")
     if is_live:
