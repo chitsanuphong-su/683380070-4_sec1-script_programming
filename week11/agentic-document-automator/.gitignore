@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+.venv/
+.ipynb_checkpoints/
+.vscode/
+.env
+
+# Generated Documents and temporary artifacts
+documents/generated_report.docx
+documents/watermarked_document.pdf
+documents/merged_docs.pdf
+documents/extracted_pdf_text.txt
+documents/extracted_word_text.txt
+documents/temp_text_watermark.pdf
+documents/reports/
